@@ -56,17 +56,3 @@ class Background:
             screen: Pygame surface to draw on
         """
         screen.blit(self.frames[self.current_frame], (0, 0))
-
-
-"""
-To use in game.py, add:
-class Game:
-    ...
-
-Add to the initialization:
-    self.background = Background('assets/background.gif')
-    
-And in the draw method:
-    self.background.update()
-    self.background.draw(self.screen)
-"""

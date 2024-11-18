@@ -14,11 +14,6 @@ class Rook(Piece):
         super().__init__(image, side, position, board)
         self.first_move = True
     
-    def move(self, new_position, board):
-        """Override the move method to update first_move"""
-        super().move(new_position, board)
-        self.first_move = False
-    
     def can_castle(self):
         """Check if the rook can castle"""
         if not self.first_move:
@@ -54,3 +49,8 @@ class Rook(Piece):
                     break
                 break        
         return moves
+        
+    def move(self, new_position, board):
+        """Override the move method to update first_move"""
+        super().move(new_position, board)
+        self.first_move = False

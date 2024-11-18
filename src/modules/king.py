@@ -23,32 +23,6 @@ class King(Piece):
         self.in_check = False
         self.check_warning_color = (255, 0, 0, 128)
     
-    def move(self, x, y):
-        """Move king to a new position"""
-        old_x, old_y = self.get_position()
-        if abs(x - old_x) == 2:
-            # Short castle
-            if x > old_x:
-                rook = self.board.map[old_y][7]  # Get the rook on the right
-                if isinstance(rook, Rook):
-                    rook.move(old_x + 1, old_y)  # Move the rook
-            # Long castle
-            else:
-                rook = self.board.map[old_y][0]  # Get the rook on the left
-                if isinstance(rook, Rook):
-                    rook.move(old_x - 1, old_y)  # Move the rook
-        self.board.map[old_y][old_x] = None
-        target_piece = self.board.map[y][x]
-        if target_piece is not None:
-            target_piece.is_captured = True            
-        self.board.map[y][x] = self
-        self.rect.x = x * TILESIZE
-        self.rect.y = y * TILESIZE
-        self.pos = (x, y)
-        self.last_position = (self.rect.x, self.rect.y)        
-        self.first_move = False
-        self.is_in_check()
-    
     def get_possible_moves(self, chessboard=None):
         moves = []
         x, y = self.get_position()
@@ -74,19 +48,31 @@ class King(Piece):
                 moves.append((x - 2, y))  # Move king 2 squares to the left        
         return moves
     
-    def is_in_check(self):
-        """Check if the king is in check"""
-        x = self.rect.x // TILESIZE
-        y = self.rect.y // TILESIZE
-        for row in range(8):
-            for col in range(8):
-                piece = self.board.map[row][col]
-                if piece and piece.side != self.side:
-                    if self._can_piece_attack(piece, x, y):
-                        self.in_check = True
-                        return True
-        self.in_check = False
-        return False
+    def move(self, x, y):
+        """Move king to a new position"""
+        old_x, old_y = self.get_position()
+        if abs(x - old_x) == 2:
+            # Short castle
+            if x > old_x:
+                rook = self.board.map[old_y][7]  # Get the rook on the right
+                if isinstance(rook, Rook):
+                    rook.move(old_x + 1, old_y)  # Move the rook
+            # Long castle
+            else:
+                rook = self.board.map[old_y][0]  # Get the rook on the left
+                if isinstance(rook, Rook):
+                    rook.move(old_x - 1, old_y)  # Move the rook
+        self.board.map[old_y][old_x] = None
+        target_piece = self.board.map[y][x]
+        if target_piece is not None:
+            target_piece.is_captured = True            
+        self.board.map[y][x] = self
+        self.rect.x = x * TILESIZE
+        self.rect.y = y * TILESIZE
+        self.pos = (x, y)
+        self.last_position = (self.rect.x, self.rect.y)        
+        self.first_move = False
+        self.is_in_check()
     
     def _can_piece_attack(self, piece, target_x, target_y):
         """Check if a piece can attack the position (x,y)"""
@@ -172,6 +158,20 @@ class King(Piece):
         self.rect.x = original_x
         self.rect.y = original_y        
         return is_attacked
+    
+    def is_in_check(self):
+        """Check if the king is in check"""
+        x = self.rect.x // TILESIZE
+        y = self.rect.y // TILESIZE
+        for row in range(8):
+            for col in range(8):
+                piece = self.board.map[row][col]
+                if piece and piece.side != self.side:
+                    if self._can_piece_attack(piece, x, y):
+                        self.in_check = True
+                        return True
+        self.in_check = False
+        return False
     
     def draw(self, screen):
         """Draw the king and the warning effect when in check"""

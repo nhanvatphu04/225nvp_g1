@@ -6,8 +6,10 @@ from tkinter import filedialog
 from pathlib import Path
 import pygame
 import logging
+from builtins import open
 
 class ResourceManager:
+    """Singleton class to manage game resources"""
     _instance = None
     
     def __new__(cls):
@@ -20,50 +22,38 @@ class ResourceManager:
         if self._initialized:
             return
             
-        # Chỉ show logs khi chạy từ source code
+        self._init_logging()
+        self._init_pygame()
+        self._init_attributes()
+        self._initialized = True
+
+    def _init_logging(self):
+        """Initialize logging system"""
         if getattr(sys, 'frozen', False):
-            # Đang chạy từ exe
-            logging.basicConfig(level=logging.ERROR)  # Chỉ log lỗi nghiêm trọng
+            logging.basicConfig(level=logging.ERROR)
         else:
-            # Đang chạy từ source code
             logging.basicConfig(
                 level=logging.INFO,
                 format='%(asctime)s - %(levelname)s - %(message)s'
             )
-            
         self.logger = logging.getLogger(__name__)
-        
+
+    def _init_pygame(self):
+        """Initialize pygame and font"""
         pygame.init()
         pygame.font.init()
         self.logger.info("Initialized pygame and font")
-        
+
+    def _init_attributes(self):
+        """Initialize basic attributes"""
         self._cache = {}
         self.config = self.load_config()
-        
-        # Tạo thư mục cache trong project folder
-        self._cache_dir = os.path.join(self.config['game_dir'], 'cache')
-        self._save_dir = os.path.join(self.config['game_dir'], 'saves')
-        
-        # Tạo các thư mục cần thiết
-        os.makedirs(self._cache_dir, exist_ok=True)
-        os.makedirs(self._save_dir, exist_ok=True)
-        
-        # Load cache từ lần chạy trước
-        self.load_cache_info()
-        
         self.setup_paths()
-        self._initialized = True
 
+    # === Path Management ===
     def setup_paths(self):
-        """Setup các đường dẫn cho tài nguyên"""
-        if getattr(sys, 'frozen', False):
-            # Nếu đang chạy từ file exe (PyInstaller)
-            self.base_path = sys._MEIPASS
-        else:
-            # Nếu đang chạy từ source code
-            self.base_path = Path(__file__).parent.parent
-
-        # Tạo các đường dẫn cố định
+        """Setup paths for resources"""
+        self.base_path = sys._MEIPASS if getattr(sys, 'frozen', False) else Path(__file__).parent.parent
         self.assets_path = os.path.join(self.base_path, 'assets')
         self.models_path = os.path.join(self.assets_path, 'models')
         self.chessboard_path = os.path.join(self.assets_path, 'chessboard')
@@ -72,21 +62,29 @@ class ResourceManager:
         self.fonts_path = os.path.join(self.assets_path, 'fonts')
         self.icon_path = os.path.join(self.assets_path, 'icon')
 
+    def get_resource_path(self, relative_path):
+        """Get full path for resource"""
+        return os.path.join(self.base_path, relative_path)
+
+    def get_save_path(self, filename):
+        """Get save file path"""
+        return os.path.join(self.config['game_dir'], 'saves', filename)
+
+    # === Config Management ===
     def load_config(self):
-        """Load hoặc tạo config file"""
+        """Load or create config file"""
         config_path = 'config.json'
         default_config = {
             'game_dir': os.path.dirname(os.path.abspath(__file__)),
             'last_save_dir': None,
-            'cache_enabled': True,  # Thêm option để bật/tắt cache
-            'debug_mode': False     # Thêm debug mode
+            'cache_enabled': True,
+            'debug_mode': False
         }
         
         try:
             if os.path.exists(config_path):
                 with open(config_path, 'r') as f:
                     loaded_config = json.load(f)
-                    # Update default config với giá trị đã load
                     default_config.update(loaded_config)
                     self.logger.info("Loaded existing config")
         except Exception as e:
@@ -95,38 +93,35 @@ class ResourceManager:
         return default_config
 
     def save_config(self):
-        """Lưu config"""
+        """Save config"""
         with open('config.json', 'w') as f:
             json.dump(self.config, f, indent=4)
 
     def select_game_directory(self):
-        """Cho phép người dùng chọn thư mục lưu game"""
+        """Allow user to select game directory"""
         root = tk.Tk()
         root.withdraw()
         
         directory = filedialog.askdirectory(
-            title='Chọn thư mục lưu game',
+            title='Select game directory',
             initialdir=self.config['game_dir']
         )
         
         if directory:
             self.config['game_dir'] = directory
-            self._cache_dir = os.path.join(directory, 'cache')
-            self._save_dir = os.path.join(directory, 'saves')
-            
-            os.makedirs(self._cache_dir, exist_ok=True)
-            os.makedirs(self._save_dir, exist_ok=True)
-            
             self.save_config()
             return True
         return False
 
+    # === Resource Loading ===
     def load_image(self, filename):
         """Load and cache image"""
+        if isinstance(filename, pygame.Surface):
+            return filename
+        
         possible_paths = [
-            os.path.join(self.models_path, filename),
-            os.path.join(self.chessboard_path, filename),
-            os.path.join(self.icon_path, filename),
+            os.path.join(path, filename) for path in 
+            [self.models_path, self.chessboard_path, self.background_path, self.icon_path]
         ]
         
         for path in possible_paths:
@@ -139,6 +134,7 @@ class ResourceManager:
                         self.logger.error(f"Failed to load image {path}: {e}")
                         continue
                 return self._cache[path]
+        
         self.logger.warning(f"Image not found: {filename}")
         return None
 
@@ -159,16 +155,24 @@ class ResourceManager:
                 self._cache[key] = pygame.font.Font(None, size)
         return self._cache[key]
 
-    def get_resource_path(self, relative_path):
-        """Get full path for resource"""
-        if getattr(sys, 'frozen', False):
-            return os.path.join(self.base_path, relative_path)
-        return os.path.join(self.base_path, relative_path)
+    def load_sound(self, filename):
+        """Load and cache sound"""
+        path = os.path.join(self.bgmusic_path, filename)
+        if path not in self._cache:
+            try:
+                if os.path.exists(path):
+                    pygame.mixer.music.load(path)
+                    self._cache[path] = True
+                    self.logger.info(f"Loaded sound: {path}")
+                else:
+                    self.logger.warning(f"Sound file not found: {path}")
+                    return False
+            except Exception as e:
+                self.logger.error(f"Failed to load sound {path}: {e}")
+                return False
+        return True
 
-    def get_save_path(self, filename):
-        """Get save file path"""
-        return os.path.join(self._save_dir, filename)
-
+    # === Save/Load Game State ===
     def save_game(self, game_state, filename='save.json'):
         """Save game state"""
         save_path = self.get_save_path(filename)
@@ -186,20 +190,19 @@ class ResourceManager:
         except:
             return None
 
+    # === Cache Management ===
     def clear_cache(self, keep_cache_info=False):
         """Clear both memory and disk cache"""
         try:
             if not keep_cache_info:
-                # Clear memory cache
                 cache_size = len(self._cache)
                 self._cache.clear()
                 self.logger.info(f"Cleared {cache_size} items from memory cache")
                 
-                # Clear disk cache
-                if os.path.exists(self._cache_dir):
-                    cache_info_path = os.path.join(self._cache_dir, 'cache_info.json')
-                    for file in os.listdir(self._cache_dir):
-                        file_path = os.path.join(self._cache_dir, file)
+                if os.path.exists(self.config['game_dir']):
+                    cache_info_path = os.path.join(self.config['game_dir'], 'cache_info.json')
+                    for file in os.listdir(self.config['game_dir']):
+                        file_path = os.path.join(self.config['game_dir'], file)
                         if file_path != cache_info_path or not keep_cache_info:
                             try:
                                 if os.path.isfile(file_path):
@@ -210,46 +213,20 @@ class ResourceManager:
                             except Exception as e:
                                 self.logger.error(f"Error deleting {file_path}: {e}")
             else:
-                # Chỉ clear memory cache, giữ lại cache info
                 self._cache.clear()
                 self.logger.info("Cleared memory cache, kept cache info")
                 
         except Exception as e:
             self.logger.error(f"Error clearing cache: {e}")
 
-    def verify_resources(self):
-        """Verify all required resources exist"""
-        required_dirs = [
-            self.assets_path,
-            self.models_path,
-            self.chessboard_path,
-            self.background_path,
-            self.bgmusic_path,
-            self.fonts_path,
-            self.icon_path
-        ]
-        
-        missing_dirs = []
-        for dir_path in required_dirs:
-            if not os.path.exists(dir_path):
-                missing_dirs.append(dir_path)
-                self.logger.warning(f"Missing directory: {dir_path}")
-        
-        if missing_dirs:
-            self.logger.error("Missing required directories")
-            return False
-        
-        self.logger.info("All resource directories verified")
-        return True
-
     def cleanup_unused_cache(self, max_size_mb=100):
         """Clean up cache if it exceeds max size"""
         try:
-            cache_size = 0
-            for path in self._cache:
-                if isinstance(self._cache[path], pygame.Surface):
-                    w, h = self._cache[path].get_size()
-                    cache_size += w * h * 4  # 4 bytes per pixel
+            cache_size = sum(
+                w * h * 4 for item in self._cache.values() 
+                if isinstance(item, pygame.Surface) 
+                for w, h in [item.get_size()]
+            )
             
             cache_size_mb = cache_size / (1024 * 1024)
             if cache_size_mb > max_size_mb:
@@ -260,26 +237,19 @@ class ResourceManager:
             self.logger.error(f"Error cleaning cache: {e}")
 
     def save_cache_info(self):
-        """Lưu thông tin cache vào file"""
+        """Save cache info to file"""
         try:
-            cache_info = {}
-            for path, resource in self._cache.items():
-                if isinstance(resource, pygame.Surface):
-                    # Lưu thông tin của Surface
-                    cache_info[path] = {
-                        'type': 'surface',
-                        'size': resource.get_size(),
-                        'path': path
-                    }
-                elif isinstance(resource, pygame.font.Font):
-                    # Lưu thông tin của Font
-                    cache_info[path] = {
-                        'type': 'font',
-                        'size': resource.get_height(),
-                        'path': path
-                    }
+            cache_info = {
+                path: {
+                    'type': 'surface' if isinstance(resource, pygame.Surface) else 'font',
+                    'size': resource.get_size() if isinstance(resource, pygame.Surface) else resource.get_height(),
+                    'path': path
+                }
+                for path, resource in self._cache.items()
+                if isinstance(resource, (pygame.Surface, pygame.font.Font))
+            }
             
-            cache_info_path = os.path.join(self._cache_dir, 'cache_info.json')
+            cache_info_path = os.path.join(self.config['game_dir'], 'cache_info.json')
             with open(cache_info_path, 'w') as f:
                 json.dump(cache_info, f, indent=4)
                 self.logger.info("Saved cache info")
@@ -288,14 +258,13 @@ class ResourceManager:
             self.logger.error(f"Error saving cache info: {e}")
 
     def load_cache_info(self):
-        """Load thông tin cache từ file"""
+        """Load cache info from file"""
         try:
-            cache_info_path = os.path.join(self._cache_dir, 'cache_info.json')
+            cache_info_path = os.path.join(self.config['game_dir'], 'cache_info.json')
             if os.path.exists(cache_info_path):
                 with open(cache_info_path, 'r') as f:
                     cache_info = json.load(f)
                     
-                # Tải lại các resource từ thông tin cache
                 for path, info in cache_info.items():
                     if info['type'] == 'surface' and os.path.exists(path):
                         try:
@@ -315,6 +284,26 @@ class ResourceManager:
                 
         except Exception as e:
             self.logger.error(f"Error loading cache info: {e}")
+
+    # === Resource Verification ===
+    def verify_resources(self):
+        """Verify all required resources exist"""
+        required_dirs = [
+            self.assets_path, self.models_path, self.chessboard_path,
+            self.background_path, self.bgmusic_path, self.fonts_path,
+            self.icon_path
+        ]
+        
+        missing_dirs = [dir_path for dir_path in required_dirs if not os.path.exists(dir_path)]
+        
+        if missing_dirs:
+            for dir_path in missing_dirs:
+                self.logger.warning(f"Missing directory: {dir_path}")
+            self.logger.error("Missing required directories")
+            return False
+        
+        self.logger.info("All resource directories verified")
+        return True
 
     def __del__(self):
         """Save cache before cleanup"""

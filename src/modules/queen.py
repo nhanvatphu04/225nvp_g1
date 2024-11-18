@@ -13,15 +13,6 @@ class Queen(Piece):
         image = queen[0] if side == 0 else queen[1]
         super().__init__(image, side, position, board)
     
-    def move(self, x, y):
-        old_x, old_y = self.get_position()
-        self.board.map[old_y][old_x] = None
-        self.board.map[y][x] = self
-        self.rect.x = x * TILESIZE
-        self.rect.y = y * TILESIZE
-        self.pos = (x, y)
-        self.last_position = (self.rect.x, self.rect.y)
-    
     def get_possible_moves(self, chessboard=None):
         moves = []
         x, y = self.get_position()
@@ -46,3 +37,12 @@ class Queen(Piece):
                     break
                 break        
         return moves
+        
+    def move(self, x, y):
+        old_x, old_y = self.get_position()
+        self.board.map[old_y][old_x] = None
+        self.board.map[y][x] = self
+        self.rect.x = x * TILESIZE
+        self.rect.y = y * TILESIZE
+        self.pos = (x, y)
+        self.last_position = (self.rect.x, self.rect.y)

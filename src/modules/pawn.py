@@ -28,7 +28,7 @@ class Pawn(Piece):
             'N': Knight
         }
         self.is_promoting = False
-
+    
     def get_possible_moves(self, chessboard=None):
         moves = []
         x, y = self.get_position()
@@ -56,7 +56,7 @@ class Pawn(Piece):
                         ((self.side == 0 and y == 3) or (self.side == 1 and y == 4))):
                         moves.append((new_x, new_y))
         return moves
-
+    
     def move(self, x, y):
         """Move the pawn to a new position"""
         old_x, old_y = self.get_position()
@@ -78,6 +78,11 @@ class Pawn(Piece):
             self.draw_promotion_menu()
             return True
         return False
+
+    def end_turn(self):
+        """Called when the turn ends"""
+        self.just_moved_two = False
+        self.can_be_captured_en_passant = False
 
     def can_promote(self):
         """Check if the pawn can promote"""
@@ -105,9 +110,18 @@ class Pawn(Piece):
             return new_piece
         return None
 
+    def draw(self, screen):
+        """Override the draw method to draw the promotion menu if needed"""
+        super().draw(screen)
+        if self.is_promoting:
+            self.draw_promotion_menu()
+
     def draw_promotion_menu(self):
         """Draw the promotion menu with images"""
-        screen = pygame.display.get_surface()        
+        screen = pygame.display.get_surface()
+        overlay = pygame.Surface((SCREENWIDTH, SCREENHEIGHT), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 128))
+        screen.blit(overlay, (0, 0))
         menu_width = TILESIZE * 8 
         menu_height = TILESIZE * 2
         menu_surface = pygame.Surface((menu_width, menu_height))
@@ -127,17 +141,8 @@ class Pawn(Piece):
                            (piece_x, piece_y + TILESIZE))
             text_obj.draw(menu_surface)
         screen_rect = screen.get_rect()
-        menu_rect = menu_surface.get_rect(center=screen_rect.center)
+        center_x = screen_rect.center[0] - (menu_width // 4)
+        center_y = screen_rect.center[1]
+        menu_rect = menu_surface.get_rect(center=(center_x, center_y))
         screen.blit(menu_surface, menu_rect)
         pygame.display.flip()
-
-    def draw(self, screen):
-        """Override the draw method to draw the promotion menu if needed"""
-        super().draw(screen)
-        if self.is_promoting:
-            self.draw_promotion_menu()
-
-    def end_turn(self):
-        """Called when the turn ends"""
-        self.just_moved_two = False
-        self.can_be_captured_en_passant = False

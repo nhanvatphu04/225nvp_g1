@@ -41,6 +41,14 @@ class UI:
             fill_color=COLOR['GREEN']
         )
 
+    def handle_events(self, event):
+        """Handle UI-related events"""
+        mouse_pos = pygame.mouse.get_pos()
+        self.restart_button.check_hover(mouse_pos)
+        if self.restart_button.is_clicked(event):
+            return "RESTART"            
+        return None
+
     def update(self, game_state):
         """Update UI elements based on game state"""
         current_turn = "White" if game_state.current_turn == 0 else "Black"
@@ -65,11 +73,4 @@ class UI:
             self.restart_button.draw(screen)
         self.ai_progress.draw(screen)
 
-    def handle_events(self, event):
-        """Handle UI-related events"""
-        mouse_pos = pygame.mouse.get_pos()
-        self.restart_button.check_hover(mouse_pos)
-        if self.restart_button.is_clicked(event):
-            return "RESTART"            
-        return None
 

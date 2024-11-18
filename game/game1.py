@@ -2,7 +2,7 @@
 from config.settings.settings import *
 from src.modules import ChessBoard, UserEvent, King, Queen, Bishop, Knight, Rook, Pawn
 from src.userinterface import UI, Text, Button
-from game.ai import ChessAI
+from game.BasicAI import ChessAI
 import os, threading
 
 class Game:

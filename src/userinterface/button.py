@@ -49,21 +49,6 @@ class Button:
             print(f"Cannot load image {image_path}: {e}")
             self.image = None
 
-    def draw(self, screen: pygame.Surface) -> None:
-        """Draw button on screen
-        Args:
-            screen: Pygame surface to draw on
-        """
-        if not self.enabled:
-            pygame.draw.rect(screen, self.disabled_color, self.rect)
-        else:
-            pygame.draw.rect(screen, self.hover_color if self.hovered else self.color, self.rect)
-        pygame.draw.rect(screen, (0, 0, 0), self.rect, 2)
-        if self.image:
-            screen.blit(self.image, self.rect)
-        if self.text:
-            screen.blit(self.text.rendered_text, self.text.rect)
-
     def check_hover(self, mouse_pos: Tuple[int, int]) -> None:
         """Check and update hover state
         Args:
@@ -89,3 +74,18 @@ class Button:
             enabled: True to enable, False to disable
         """
         self.enabled = enabled
+
+    def draw(self, screen: pygame.Surface) -> None:
+        """Draw button on screen
+        Args:
+            screen: Pygame surface to draw on
+        """
+        if not self.enabled:
+            pygame.draw.rect(screen, self.disabled_color, self.rect)
+        else:
+            pygame.draw.rect(screen, self.hover_color if self.hovered else self.color, self.rect)
+        pygame.draw.rect(screen, (0, 0, 0), self.rect, 2)
+        if self.image:
+            screen.blit(self.image, self.rect)
+        if self.text:
+            screen.blit(self.text.rendered_text, self.text.rect)
