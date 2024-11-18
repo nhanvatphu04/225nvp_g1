@@ -24,6 +24,20 @@ Developed by [nhanvatphu04](https://github.com/nhanvatphu04).
 2. Install dependencies:
 pip install -r requirements.txt
 
+## Build Instructions
+1. Install PyInstaller:
+pip install pyinstaller
+
+2. Build the executable using the spec file:
+pyinstaller build.spec
+
+3. The executable will be created in the `dist` folder as `Chess.exe`
+
+Note: The build process will automatically:
+- Include all necessary assets (images, sounds, fonts)
+- Create a windowed application (no console)
+- Set the application icon
+
 ## Running the Game
 python main.py
 
