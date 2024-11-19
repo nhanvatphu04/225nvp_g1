@@ -72,14 +72,25 @@ class ProAI:
         possible_moves = self.get_all_possible_moves(pieces, chessboard)
         if not possible_moves:
             return None
-            
+        
         moves_with_scores = []
+        king = next((p for p in pieces if p.__class__.__name__ == 'King' and p.side == self.side), None)
+        
+        is_in_check = king and king.is_in_check()
+        
         for piece, move in possible_moves:
             old_x, old_y = piece.get_position()
             old_piece_at_target = chessboard.map[move[1]][move[0]]            
 
             piece.move(move[0], move[1])
             score = self.evaluate_board(pieces, chessboard)
+
+            if is_in_check:
+                if not king.is_in_check():
+                    score += 1000
+
+            if king.is_in_check():
+                score -= 2000
 
             if old_piece_at_target:
                 capture_bonus = self.piece_values[old_piece_at_target.__class__.__name__] * 0.7
@@ -95,6 +106,24 @@ class ProAI:
             moves_with_scores.append((score, (piece, move)))
 
         moves_with_scores.sort(key=lambda x: x[0], reverse=True)
+        
+        if is_in_check:
+            valid_moves = []
+            for score, move in moves_with_scores:
+                piece, (new_x, new_y) = move
+                old_x, old_y = piece.get_position()
+                old_piece_at_target = chessboard.map[new_y][new_x]
+                
+                piece.move(new_x, new_y)
+                if not king.is_in_check():
+                    valid_moves.append((score, move))
+                piece.move(old_x, old_y)
+                if old_piece_at_target:
+                    chessboard.map[new_y][new_x] = old_piece_at_target
+                
+            if valid_moves:
+                moves_with_scores = valid_moves
+        
         top_moves = moves_with_scores[:7]
         
         if top_moves:
@@ -207,9 +236,10 @@ class ProAI:
         attack_score = 0
         possible_moves = piece.get_possible_moves(chessboard)
         for x, y in possible_moves:
-            target = chessboard.map[y][x]
-            if target and target.side != piece.side:
-                attack_score += self.piece_values[target.__class__.__name__] * 0.1
+            if 0 <= x < 8 and 0 <= y < 8:
+                target = chessboard.map[y][x]
+                if target and target.side != piece.side:
+                    attack_score += self.piece_values[target.__class__.__name__] * 0.1
         return attack_score
     
     def control_center(self, piece, x, y):

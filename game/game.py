@@ -239,7 +239,14 @@ class Game:
         if self.is_loading:
             self.loading_time += self.clock.get_time()
             progress = min(self.loading_time / self.loading_duration, 1.0)
-            self.loading_progress.set_progress(progress)            
+            self.loading_progress.set_progress(progress)
+            
+            if self.current_loading_message.startswith("Loading background"):
+                available_messages = [msg for msg in self.loading_messages 
+                                   if not msg.startswith("Loading background") 
+                                   and not msg == "Processing frames..."]
+                self.current_loading_message = random.choice(available_messages)
+            
             if self.loading_time >= self.loading_duration:
                 self.is_loading = False
                 self.loading_time = 0
